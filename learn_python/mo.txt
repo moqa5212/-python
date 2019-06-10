@@ -1,0 +1,112 @@
+clc,clear
+syms t; 
+R=0.054;e=0.01583007;L=0.095465;w=5*pi;
+Beta1=asin(e/(L+R));
+Beta2=asin(e/(L-R));
+i=w*t-Beta1;
+j=asin((R*sin(i)+e)/L);
+s=R*cos(i)+sqrt(L^2-(R*sin(i)+e)^2);
+v=diff(s,t);a=diff(v,t);
+
+[s0,v0,a0,j0]=deal(inline(s),inline(v),inline(a),inline(j));
+tt=2*pi/w;%转一圈的时间
+t1=0:0.0001:tt;
+i1=t1*w*180/pi;%i1为角度制
+[s1,v1,a1]=deal(s0(t1),v0(t1),a0(t1));
+  %画s v a 的图
+plot(i1,s1);xlim([0,360]);
+set(gca,'xtick',0:15:360);
+grid on;figure;
+
+plot(i1,v1);xlim([0,360]);
+set(gca,'xtick',0:15:360);
+grid on;figure;
+
+plot(i1,a1);xlim([0,360]);
+set(gca,'xtick',0:15:360);
+grid on;figure;
+  %每隔15°导出一个数据
+t2=0:tt*15/360:tt;
+i2=t2*w*180/pi;
+[s2,v2,a2,j2]=deal(s0(t2),v0(t2),a0(t2),j0(t2));
+date1 = [i2',j2',s2',v2',a2']
+
+  %动力分析
+  
+g=9.8;J=3.5;f=0.1;d=0.05715;
+ac=w^2*R^2*cos(i)^2*sin(j)/(L^2*cos(j)^3)-w^2*R*sin(i)/(L*cos(j));
+a2x=w^2*R*cos(i)+w^2*R^2*cos(i)^2/(2*L*cos(j)^3)-w^2*R*sin(i)*sin(j)/(2*cos(j));
+a2y=w^2*R*sin(i)/2;
+m3=19;m2=160;%m2、m3单位Kg
+Fa2x=m2*a2x;
+Fa2y=m2*a2y;
+Fa3=m3*a;
+M2=J*ac;
+A=pi*d^2/4;
+   %吸入过程
+Fp1=(0.101-0.1)*10^6*A;
+
+R23y1=(-J*ac-m2*(g+a2y)*L/2*cos(j)-(f*m3*g+Fp1-m3*a+m2*a2x/2)*L*sin(j))/(f*L*sin(j)-L*cos(j));
+R12y1=R23y1-m2*g-m2*a2y;
+R431=R23y1+m3*g;
+R23x1=-m3*a+f*R431+Fp1;
+R12x1=R23x1+m2*a2x;
+Md1=R12x1*R*sin(i)+R12y1*R*cos(i);
+
+[R23x_1,R23y_1,R12x_1,R12y_1,R43_1,Md_1]=deal(eval(R23x1),eval(R23y1),eval(R12x1),eval(R12y1),eval(R431),eval(Md1));
+[R23x_2,R23y_2,R12x_2,R12y_2,R43_2,Md_2]=deal(inline(R23x_1),inline(R23y_1),inline(R12x_1),inline(R12y_1),inline(R43_1),inline(Md_1));
+
+   %排出过程
+Fp2=(40-0.101)*10^6*A;
+
+R23y2=(-J*ac-m2*(g+a2y)*L/2*cos(j)+(f*m3*g+Fp2+m3*a-m2*a2x/2)*L*sin(j))/(-f*L*sin(j)-L*cos(j));
+R12y2=R23y2-m2*g-m2*a2y;
+R432=R23y2+m3*g;
+R23x2=-m3*a-f*R432-Fp2;
+R12x2=R23x2+m2*a2x;
+Md2=R12x2*R*sin(i)+R12y2*R*cos(i);
+
+[R23x_1,R23y_1,R12x_1,R12y_1,R43_1,Md_1]=deal(eval(R23x2),eval(R23y2),eval(R12x2),eval(R12y2),eval(R432),eval(Md2));
+[R23x_3,R23y_3,R12x_3,R12y_3,R43_3,Md_3]=deal(inline(R23x_1),inline(R23y_1),inline(R12x_1),inline(R12y_1),inline(R43_1),inline(Md_1));
+
+     %分段函数
+R23x=R23x_2(t1).*(t1>=0 & t1<=(pi-Beta2)/(5*pi))+R23x_3(t1).*(t1>(pi-Beta2)/(5*pi) & t1<=0.4);
+R23y=R23y_2(t1).*(i1>=0 & t1<=(pi-Beta2)/(5*pi))+R23y_3(t1).*(t1>(pi-Beta2)/(5*pi) & t1<=0.4);
+R12x=R12x_2(t1).*(i1>=0 & t1<=(pi-Beta2)/(5*pi))+R12x_3(t1).*(t1>(pi-Beta2)/(5*pi) & t1<=0.4);
+R12y=R12y_2(t1).*(i1>=0 & t1<=(pi-Beta2)/(5*pi))+R12y_3(t1).*(t1>(pi-Beta2)/(5*pi) & t1<=0.4);
+R43 =R43_2(t1) .*(i1>=0 & t1<=(pi-Beta2)/(5*pi))+R43_3(t1) .*(t1>(pi-Beta2)/(5*pi) & t1<=0.4);
+Md  =Md_2(t1)  .*(i1>=0 & t1<=(pi-Beta2)/(5*pi))+Md_3(t1)  .*(t1>(pi-Beta2)/(5*pi) & t1<=0.4);
+     
+     %R23x的曲线
+plot(i1,R23x);xlim([0,360]);
+set(gca,'xtick',0:15:360);
+grid on;figure;
+     %R23y的曲线
+plot(i1,R23y);xlim([0,360]);
+set(gca,'xtick',0:15:360);
+grid on;figure;
+     %R12x的曲线
+plot(i1,R12x);xlim([0,360]);
+set(gca,'xtick',0:15:360);
+grid on;figure;
+     %R12y的曲线
+plot(i1,R12y);xlim([0,360]);
+set(gca,'xtick',0:15:360);
+grid on;figure;
+     %R43的曲线
+plot(i1,R43);xlim([0,360]);
+set(gca,'xtick',0:15:360);
+grid on;figure;
+    %Md的曲线
+plot(i1,Md);xlim([0,360]);
+set(gca,'xtick',0:15:360);
+grid on;
+    %每隔15°导出一个数据
+R23x_4=R23x_2(t2).*(t2>=0 & t2<=(pi-Beta2)/(5*pi))+R23x_3(t2).*(t2>(pi-Beta2)/(5*pi) & t2<=0.4);
+R23y_4=R23y_2(t2).*(t2>=0 & t2<=(pi-Beta2)/(5*pi))+R23y_3(t2).*(t2>(pi-Beta2)/(5*pi) & t2<=0.4); 
+R12x_4=R12x_2(t2).*(t2>=0 & t2<=(pi-Beta2)/(5*pi))+R12x_3(t2).*(t2>(pi-Beta2)/(5*pi) & t2<=0.4);
+R12y_4=R12y_2(t2).*(t2>=0 & t2<=(pi-Beta2)/(5*pi))+R12y_3(t2).*(t2>(pi-Beta2)/(5*pi) & t2<=0.4);
+R43_4 =R43_2(t2) .*(t2>=0 & t2<=(pi-Beta2)/(5*pi))+R43_3(t2) .*(t2>(pi-Beta2)/(5*pi) & t2<=0.4);
+Md_4=Md_2(t2).*(t2>=0 & t2<=(pi-Beta2)/(5*pi))+Md_3(t2).*(t2>(pi-Beta2)/(5*pi) & t2<=0.4);   
+date2 = [i2',R23x_4',R23y_4',R12x_4',R12y_4',R43_4',Md_4']
+
